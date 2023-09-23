@@ -1,2 +1,40 @@
 Assignment 3: STL HashMap (short answer questions)
 Names:
+1. 解释一下at()与[]在实现上的区别?
+对于不存在的键，at()会抛出out_of_range异常而[]会将该键插入并设置一个默认value
+2. HashMap有一个find函数，同时在STL库中也有一个默认实现的find函数，如果我们需要在一个map中找到key k，我们倾向于使用前者而非后者，为什么？
+std::find()是线性查找，时间复杂度是O(n)，HashMap的find是Hash查找，一般是O(1)，最坏情况是O(n)
+3. 这个HashMap是否符合RALL原则？
+符合，它在构造函数中分配资源，在析构函数中通过clear函数释放资源
+4. 解释一下HashMapIterator中的++运算符的实现？
+template <typename Map, bool IsConst>
+HashMapIterator<Map, IsConst> HashMapIterator<Map, IsConst>::operator++(int) {
+    auto copy = *this; // calls the copy constructor to create copy
+    ++(*this);
+    return copy;
+}
+上述为后置的++,即iterator++
+● 先复制当前iterator对象（不是指针）
+● 调用当前iterator对象的前置++，该前置++作用为使得this指向下一个Iterator
+● 返回复制的iterator
+template <typename Map, bool IsConst>
+HashMapIterator<Map, IsConst>& HashMapIterator<Map, IsConst>::operator++() {
+    _node = _node->next; // _node can't be nullptr - that would be incrementing end()
+    if (_node == nullptr) { // if you reach the end of the bucket, find the next bucket
+        for (++_bucket; _bucket < _buckets_array->size(); ++_bucket) {
+            _node = (*_buckets_array)[_bucket];
+            if (_node != nullptr) {
+                return *this;
+            }
+        }
+    }
+    return *this;
+}
+上述为前置的++，即++iterator
+● 直接找当前bucket的下一个结点，若有直接返回
+● 若没有则找下一个bucket的第一个结点，若有直接返回
+● 如果所有bucket都没有，则返回nullptr，也就是end()
+5. 为什么HashMap需要重载move相关的SMF，而HashMapIterator不需要呢？
+因为move操作主要是针对大内存的对象与数组，节省时间和空间，而HashMapIterator中全是指针和基本数据类型，不需要move。
+6. 在move constructor与move assignment operator中的参数已经是右值了，为什么还是要一一对其成员进行move？
+This can be explained by this rule: A unnamed rvalue reference is a rvalue, a named rvalue reference is a lvalue. So we need std::move in this case to force move semantics

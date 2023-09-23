@@ -1,11 +1,10 @@
+#ifndef HASHMAP_H
+#define HASHMAP_H
+
 /*
 * Assignment 2: HashMap template interface (STARTER CODE)
 *      TODO: write a comment here.
 */
-
-#ifndef HASHMAP_H
-#define HASHMAP_H
-
 #include <iostream>             // for cout
 #include <iomanip>              // for setw, setprecision, setfill, right
 #include <sstream>              // for istringstream
@@ -119,7 +118,6 @@ public:
     * HashMap<int, int> map = 1;   // copy-initialization, does not compile.
     */
     explicit HashMap(size_t bucket_count, const H& hash = H());
-
     /*
     * Destructor.
     *
@@ -143,7 +141,7 @@ public:
     *
     * Complexity: O(1) (inlined because function is short)
     */
-    inline size_t size() const;
+    inline size_t size() const noexcept;
 
     /*
     * Returns whether the HashMap is empty.
@@ -156,7 +154,7 @@ public:
     *
     * Complexity: O(1) (inlined because function is short)
     */
-    inline bool empty() const;
+    inline bool empty() const noexcept;
 
     /*
     * Returns the load_factor, defined as size/bucket_count.
@@ -172,7 +170,7 @@ public:
     * Notes: our minimal implementation does not automatically rehash when the load
     * factor is too high. If you want as an extension, you can implement automatic rehashing.
     */
-    inline float load_factor() const;
+    inline float load_factor() const noexcept;
 
     /*
     * Returns the number of buckets.
@@ -193,7 +191,7 @@ public:
     * A noexcept function that throws an exception will automatically
     * terminate the program.
     */
-    inline size_t bucket_count() const;
+    inline size_t bucket_count() const noexcept;
 
     /*
     * Returns whether or not the HashMap contains the given key.
@@ -211,7 +209,7 @@ public:
     * Since contains feels more natural to students who've used the Stanford libraries
     * and will be available in the future, we will implement map.contains(key).
     */
-    bool contains(const K& key) const;
+    bool contains(const K& key) const noexcept;
 
     /*
     * Returns a l-value reference to the mapped value given a key.
@@ -250,7 +248,7 @@ public:
     * ready to be inserted again, as if it were a newly constructed HashMap with no elements.
     * The number of buckets should stay the same.
     */
-    void clear();
+    void clear() noexcept;
 
     /*
      * Finds the element with the given key, and returns an iterator to that element.
@@ -290,7 +288,7 @@ public:
     */
     std::pair<iterator, bool> insert(const value_type& value);
 
-    std::pair<const_iterator, bool> insert(const value_type& value) const;
+    std::pair<iterator , bool> insert(value_type&& value);
     /*
     * Erases a K/M pair (if one exists) corresponding to given key from the HashMap.
     * This is a no-op if the key does not exist.
@@ -359,7 +357,7 @@ public:
      * Usage:
      *      auto iter = map.begin();
      */
-    iterator begin();
+    iterator begin() noexcept;
 
     /*
      * Returns a const_iterator to the first element.
@@ -368,7 +366,7 @@ public:
      * Usage:
      *      auto iter = cmap.begin();
      */    
-    const_iterator begin() const;
+    const_iterator begin() const noexcept;
 
     /*
      * Returns an iterator to one past the last element.
@@ -377,9 +375,9 @@ public:
      * Usage:
      *      while (iter != map.end()) {...}
      */
-    iterator end();
+    iterator end() noexcept;
 
-    const_iterator end() const;
+    const_iterator end() const noexcept;
     /*
     * Function that will print to std::cout the contents of the hash table as
     * linked lists, and also displays the size, number of buckets, and load factor.
@@ -457,7 +455,19 @@ public:
 
     /* Milestone 2 headers (you need to declare these) */
     // TODO: declare headers for copy constructor/assignment, move constructor/assignment
+    /*
+     * copy constructor
+     */
+    HashMap(const HashMap<K, M, H>& h);
 
+    // copy assignment operator
+    HashMap<K, M, H>& operator = (const HashMap<K, M, H>& h);
+
+    // move constructor
+    HashMap(HashMap<K, M, H>&& h);
+
+    // move assignment operator
+    HashMap<K, M, H>& operator = (HashMap<K, M, H>&& h);
 private:
     /*
     * node structure represented a node in a linked list.

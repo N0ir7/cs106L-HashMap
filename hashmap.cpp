@@ -2,7 +2,6 @@
 * Assignment 2: HashMap template implementation (STARTER CODE)
 *      TODO: write a comment here.
 */
-
 #include "hashmap.h"
 
 template <typename K, typename M, typename H>
@@ -20,23 +19,23 @@ HashMap<K, M, H>::~HashMap() {
     clear();
 }
 
+
 template <typename K, typename M, typename H>
-inline size_t HashMap<K, M, H>::size() const{
+inline size_t HashMap<K, M, H>::size() const noexcept{
     return _size;
 }
 
-template <typename K, typename M, typename H>
-inline bool HashMap<K, M, H>::empty() const{
+template <typename K, typename M, typename H>inline bool HashMap<K, M, H>::empty() const noexcept{
     return size() == 0;
 }
 
 template <typename K, typename M, typename H>
-inline float HashMap<K, M, H>::load_factor() const{
+inline float HashMap<K, M, H>::load_factor() const noexcept{
     return static_cast<float>(size())/bucket_count();
 };
 
 template <typename K, typename M, typename H>
-inline size_t HashMap<K, M, H>::bucket_count() const{
+inline size_t HashMap<K, M, H>::bucket_count() const noexcept{
     return _buckets_array.size();
 };
 
@@ -50,15 +49,17 @@ M& HashMap<K, M, H>::at(const K& key) const{
 }
 
 template <typename K, typename M, typename H>
-bool HashMap<K, M, H>::contains(const K& key) const{
+bool HashMap<K, M, H>::contains(const K& key) const noexcept{
     return find_node(key).second != nullptr;
 }
 
 template <typename K, typename M, typename H>
-void HashMap<K, M, H>::clear() {
+void HashMap<K, M, H>::clear() noexcept{
     for (auto& curr : _buckets_array) {
         while (curr != nullptr) {
-            curr = curr->next;
+            auto trash = curr;
+             curr = curr->next;
+             delete trash;
         }
     }
     _size = 0;
@@ -92,9 +93,20 @@ std::pair<typename HashMap<K, M, H>::iterator, bool> HashMap<K, M, H>::insert(co
 }
 
 template <typename K, typename M, typename H>
-std::pair<typename HashMap<K, M, H>::const_iterator, bool> HashMap<K, M, H>::insert(const value_type& value)const {
-    auto pair = const_cast<HashMap<K, M, H>*>(this)->insert(value);
-    return {static_cast<const_iterator>(pair.first),pair.second};
+std::pair<typename HashMap<K, M, H>::iterator, bool> HashMap<K, M, H>::insert(value_type&& value){
+    const auto& [key, mapped] = value;
+    auto [prev, node_to_edit] = find_node(key);
+    size_t index = _hash_function(key) % bucket_count();
+
+    if (node_to_edit != nullptr) {
+        return {make_iterator(node_to_edit), false};
+    }
+
+    auto temp = new node(std::move(value), _buckets_array[index]);
+    _buckets_array[index] = temp;
+
+    ++_size;
+    return {make_iterator(temp), true};
 }
 
 template <typename K, typename M, typename H>
@@ -114,16 +126,16 @@ typename HashMap<K, M, H>::node_pair HashMap<K, M, H>::find_node(const K& key) c
 }
 
 template <typename K, typename M, typename H>
-typename HashMap<K, M, H>::iterator HashMap<K, M, H>::begin(){
+typename HashMap<K, M, H>::iterator HashMap<K, M, H>::begin()noexcept{
     size_t index = first_not_empty_bucket();
-    if (index == bucket_count()) {
+    if (index ==  bucket_count()) {
         return end();
     }
     return make_iterator(_buckets_array[index]);
 }
 
 template <typename K, typename M, typename H>
-typename HashMap<K, M, H>::const_iterator HashMap<K, M, H>::begin() const {
+typename HashMap<K, M, H>::const_iterator HashMap<K, M, H>::begin() const noexcept{
     // This is called the static_cast/const_cast trick, which allows us to reuse
     // the non-const version of find to implement the const version.
     // The idea is to cast this so it's pointing to a non-const HashMap, which
@@ -133,12 +145,12 @@ typename HashMap<K, M, H>::const_iterator HashMap<K, M, H>::begin() const {
 }
 
 template <typename K, typename M, typename H>
-typename HashMap<K, M, H>::iterator HashMap<K, M, H>::end(){
+typename HashMap<K, M, H>::iterator HashMap<K, M, H>::end() noexcept{
     return make_iterator(nullptr);
 }
 
 template <typename K, typename M, typename H>
-typename HashMap<K, M, H>::const_iterator HashMap<K, M, H>::end() const{
+typename HashMap<K, M, H>::const_iterator HashMap<K, M, H>::end() const noexcept{
     return static_cast<const_iterator>(const_cast<HashMap<K, M, H>*>(this)->end());
 }
 
@@ -268,5 +280,70 @@ std::ostream& operator<<(std::ostream& os, const HashMap<K, M, H>& rhs) {
 }
 
 /* Begin Milestone 2: Special Member Functions */
+// copy constructor
+template <typename K, typename M, typename H>
+HashMap<K, M, H>::HashMap(const HashMap<K, M, H>& h):HashMap{h.bucket_count(),h._hash_function}{
+    // 使用委托构造函数初始化
 
+    // 将目标对象中的值依次插入
+    for (auto bucket : h._buckets_array) {
+        while (bucket != nullptr) {
+            this->insert(bucket->value);
+            bucket = bucket->next;
+        }
+    }
+}
+// copy assignment operator
+template <typename K, typename M, typename H>
+HashMap<K, M, H>& HashMap<K, M, H>::operator = (const HashMap<K, M, H>& h){
+    if(this == &h){ // 不能自己赋值给自己
+        return *this;
+    }
+    // 将之前的内容清除
+    clear();
+    // 复制成员变量
+    this->_hash_function = h._hash_function;
+    // 这里要注意分配一个新数组，因为原对象可能_buckets_array为null
+    std::vector<node*> new_bucket_array(h._size, nullptr);
+    _buckets_array = std::move(new_bucket_array);
+    // 将目标对象的值逐个插入
+    for (auto bucket : h._buckets_array) {
+        while (bucket != nullptr) {
+            this->insert(bucket->value);
+            bucket = bucket->next;
+        }
+    }
+    return *this;
+}
+// move constructor
+template <typename K, typename M, typename H>
+HashMap<K, M, H>::HashMap(HashMap<K, M, H>&& h):
+        _size(std::move(h._size)),
+        _hash_function(std::move(h._hash_function)),
+        _buckets_array(std::move(h._buckets_array)){
+    // 将被move的对象的资源拥有设置为一个有效但未指定的状态，以防止被move对象之后调用析构函数将资源释放
+    for (auto& bucket : h._buckets_array) {
+        bucket = nullptr;
+    }
+}
+// move assignment operator
+template <typename K, typename M, typename H>
+HashMap<K, M, H>& HashMap<K, M, H>::operator = (HashMap<K, M, H>&& h){
+    if(this == &h){ // 不能自己赋值给自己
+        return *this;
+    }
+    // 将之前的内容清除
+    clear();
+    // 成员变量分别进行move
+    _hash_function = std::move(h._hash_function);
+    _size = std::move(h._size);
+    _buckets_array = std::move(h._buckets_array);
+
+    // 将被move的对象的资源拥有设置为一个有效但未指定的状态，以防止被move对象之后调用析构函数将资源释放
+    for (auto& bucket : h._buckets_array) {
+        bucket = nullptr;
+    }
+
+    return *this;
+}
 /* end student code */
